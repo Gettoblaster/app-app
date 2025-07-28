@@ -10,9 +10,9 @@ struct SampleDayStat: Identifiable, Codable {
 
 // Backend-Modelle
 struct Statistic: Decodable {
-    let first_checkin: Date
+    let first_checkin: Date?
     let last_checkout: Date?
-    let current_status: String
+    let current_status: String?
     let days_with_logs_in_month: String
     let average_checkin_time: String?
     let weekly_summary: [WeekSummary]
@@ -73,12 +73,27 @@ struct AttendanceView: View {
     @State private var isLoading = true
     @State private var selectedWeekIndex = 0
 
+    private let weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri"]
+
     private let chartHeight: CGFloat = 150
 
     private var first: Statistic? { stats.first }
 
     private var weeks: [[DayStat]] {
         first?.weekly_summary.map { $0.days } ?? []
+    }
+
+    private var completedWeeks: [[DayStat]] {
+        if weeks.isEmpty {
+            return [weekDays.map { DayStat(day: $0, locationId: 0, locationName: "", hours: 0) }]
+        }
+
+        return weeks.map { week in
+            var dict = Dictionary(uniqueKeysWithValues: week.map { ($0.day, $0) })
+            return weekDays.map { day in
+                dict[day] ?? DayStat(day: day, locationId: 0, locationName: "", hours: 0)
+            }
+        }
     }
 
     private var checkInTime: String {
@@ -92,7 +107,7 @@ struct AttendanceView: View {
     }
 
     private var checkInStatus: CheckInStatus {
-        first?.current_status.lowercased() == "anwesend" ? .present : .away
+        first?.current_status?.lowercased() == "anwesend" ? .present : .away
     }
 
     private var officeDaysThisMonth: Int {
@@ -119,7 +134,7 @@ struct AttendanceView: View {
     }
 
     private var maxHours: Double {
-        let week = weeks[safe: selectedWeekIndex] ?? []
+        let week = completedWeeks[safe: selectedWeekIndex] ?? []
         return max(1, week.map { $0.hours }.max() ?? 1)
     }
 
@@ -188,9 +203,9 @@ struct AttendanceView: View {
             }
 
             TabView(selection: $selectedWeekIndex) {
-                ForEach(weeks.indices, id: \.self) { idx in
+                ForEach(completedWeeks.indices, id: \.self) { idx in
                     HStack(alignment: .bottom, spacing: 16) {
-                        ForEach(weeks[idx]) { stat in
+                        ForEach(completedWeeks[idx]) { stat in
                             VStack(spacing: 6) {
                                 Text(formatHours(stat.hours))
                                     .font(.caption2).foregroundColor(.gray)
