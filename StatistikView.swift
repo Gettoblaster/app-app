@@ -10,7 +10,7 @@ struct SampleDayStat: Identifiable, Codable {
 
 // Backend-Modelle
 struct Statistic: Decodable {
-    let first_checkin: Date
+    let first_checkin: Date?
     let last_checkout: Date?
     let current_status: String
     let days_with_logs_in_month: String
